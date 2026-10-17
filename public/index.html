@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bookshelf</title>
+  <style>
+    :root {
+      --bg: #0a0e1a; --panel: #111729; --panel2: #161d33; --border: #232c47;
+      --text: #e8ecf8; --muted: #8a94b2;
+      --cyan: #22e5e5; --magenta: #ff2bd6; --green: #3ddc97; --danger: #ff6b81;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 500px at 50% -10%, #1a2250 0%, var(--bg) 60%) fixed;
+      color: var(--text);
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 72px; }
+
+    header h1 { margin: 0; font-size: 2.2rem; letter-spacing: -.02em; }
+    header h1 span { color: var(--cyan); }
+    header p { margin: 6px 0 24px; color: var(--muted); }
+
+    h2 { font-size: 1.1rem; margin: 0 0 12px; }
+    section { margin-bottom: 36px; }
+
+    input, select, button { font: inherit; color: var(--text); }
+    input, select {
+      background: var(--panel2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; min-width: 0;
+    }
+    input:focus, select:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+    button {
+      cursor: pointer; border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600;
+      background: var(--cyan); color: #04211f;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:disabled { opacity: .55; cursor: default; filter: none; }
+    button.magenta { background: var(--magenta); color: #fff; }
+    button.ghost { background: transparent; color: var(--danger); border: 1px solid var(--border); font-weight: 500; }
+
+    #error { color: var(--danger); min-height: 1.3em; margin-bottom: 8px; }
+
+    /* Busca */
+    .searchbar { display: flex; gap: 10px; }
+    .searchbar input { flex: 1; font-size: 1.05rem; padding: 12px 14px; }
+    .row { display: flex; gap: 14px; overflow-x: auto; padding: 14px 2px 8px; scroll-snap-type: x proximity; }
+    .hint { color: var(--muted); margin: 12px 0 0; }
+
+    /* Cards */
+    .card { display: flex; flex-direction: column; gap: 8px; }
+    .row .card { flex: 0 0 150px; scroll-snap-align: start; }
+    .cover {
+      position: relative; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden;
+      background: linear-gradient(160deg, #1b2450, #2a1646);
+      border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,.35);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .card:hover .cover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(34,229,229,.12); }
+    .cover .ph {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 12px; text-align: center; font-weight: 700; color: #c9d1f5; line-height: 1.25;
+    }
+    .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .badge {
+      position: absolute; top: 8px; left: 8px; font-size: .72rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 999px; color: #04120d; text-transform: uppercase; letter-spacing: .03em;
+    }
+    .s-quero_ler { background: var(--magenta); color: #fff; }
+    .s-lendo { background: var(--cyan); }
+    .s-lido { background: var(--green); }
+    .card h3 { margin: 0; font-size: .95rem; line-height: 1.25; }
+    .card .author { margin: 0; color: var(--muted); font-size: .85rem; }
+    .card .meta { margin: 0; color: var(--muted); font-size: .8rem; }
+    .stars { color: #ffd166; letter-spacing: .05em; }
+    .card button.add { width: 100%; padding: 8px; font-size: .9rem; }
+
+    /* Estante */
+    .shelf-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab {
+      background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+      padding: 7px 14px; border-radius: 999px; font-weight: 500;
+    }
+    .tab.active { background: var(--cyan); color: #04211f; border-color: var(--cyan); font-weight: 700; }
+    .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: .85rem; color: var(--muted); }
+    .chip b { display: block; color: var(--text); font-size: 1.15rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 22px 16px; }
+    .actions { display: flex; gap: 6px; }
+    .actions select { flex: 1; padding: 6px 8px; font-size: .8rem; }
+    .actions button { padding: 6px 10px; font-size: .8rem; }
+    .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 36px 12px; border: 1px dashed var(--border); border-radius: 12px; }
+
+    /* Cadastro manual */
+    details { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    summary { cursor: pointer; font-weight: 600; }
+    #book-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    #book-form .full { grid-column: 1 / -1; }
+
+    @media (max-width: 560px) {
+      header h1 { font-size: 1.8rem; }
+      .searchbar { flex-direction: column; }
+      #book-form { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Book<span>shelf</span></h1>
+      <p>Minha estante de livros — TypeScript + PostgreSQL + Open Library</p>
+    </header>
+
+    <div id="error" role="alert"></div>
+
+    <section>
+      <h2>Buscar livros</h2>
+      <form class="searchbar" id="search-form">
+        <input id="search-q" type="search" placeholder="Ex.: Dom Casmurro, Tolkien, Clean Code" minlength="2" required />
+        <button type="submit" class="magenta">Buscar</button>
+      </form>
+      <div id="search-results"></div>
+    </section>
+
+    <section>
+      <div class="shelf-head">
+        <h2 style="margin:0">Minha estante</h2>
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-filter="">Todos</button>
+          <button class="tab" data-filter="quero_ler">Quero ler</button>
+          <button class="tab" data-filter="lendo">Lendo</button>
+          <button class="tab" data-filter="lido">Lidos</button>
+        </div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="grid" id="list"></div>
+    </section>
+
+    <details>
+      <summary>Adicionar manualmente</summary>
+      <form id="book-form">
+        <input class="full" name="title" placeholder="Título" required maxlength="200" />
+        <input name="author" placeholder="Autor" required maxlength="120" />
+        <input name="pages" type="number" min="1" placeholder="Páginas" />
+        <select name="status">
+          <option value="quero_ler">Quero ler</option>
+          <option value="lendo">Lendo</option>
+          <option value="lido">Lido</option>
+        </select>
+        <select name="rating">
+          <option value="">Sem nota</option>
+          <option value="1">1 ★</option><option value="2">2 ★</option><option value="3">3 ★</option>
+          <option value="4">4 ★</option><option value="5">5 ★</option>
+        </select>
+        <button class="full" type="submit">Adicionar livro</button>
+      </form>
+    </details>
+  </main>
+
+  <script>
+    const STATUS = { quero_ler: "Quero ler", lendo: "Lendo", lido: "Lido" };
+    const $ = (id) => document.getElementById(id);
+    let currentFilter = "";
+    let lastResults = [];
+
+    function esc(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function showError(message) { $("error").textContent = message || ""; }
+
+    async function api(path, options) {
+      const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+      if (res.status === 204) return null;
+      const data = await res.json();
+      if (!res.ok) throw new Error((data.errors || ["Erro inesperado"]).join("; "));
+      return data;
+    }
+
+    function coverHtml(title, url, badge) {
+      return `
+        <div class="cover">
+          <div class="ph">${esc(title)}</div>
+          ${url ? `<img src="${esc(url)}" alt="Capa de ${esc(title)}" loading="lazy" onerror="this.style.display='none'" />` : ""}
+          ${badge ? `<span class="badge s-${esc(badge)}">${esc(STATUS[badge])}</span>` : ""}
+        </div>`;
+    }
+
+    /* ---------- Estante ---------- */
+    async function loadStats() {
+      const s = await api("/books/stats");
+      const chip = (label, value) => `<div class="chip">${label}<b>${value}</b></div>`;
+      $("stats").innerHTML =
+        chip("Total", s.total) + chip("Quero ler", s.quero_ler) + chip("Lendo", s.lendo) +
+        chip("Lidos", s.lido) + chip("Páginas lidas", s.paginas_lidas) +
+        chip("Nota média", s.media_notas ?? "—");
+    }
+
+    function bookCard(b) {
+      const stars = b.rating ? `<span class="stars">${"★".repeat(b.rating)}${"☆".repeat(5 - b.rating)}</span>` : "";
+      const meta = [stars, b.pages ? `${b.pages} págs.` : ""].filter(Boolean).join(" · ");
+      return `
+        <article class="card">
+          ${coverHtml(b.title, b.cover_url, b.status)}
+          <h3>${esc(b.title)}</h3>
+          <p class="author">${esc(b.author)}</p>
+          ${meta ? `<p class="meta">${meta}</p>` : ""}
+          <div class="actions">
+            <select class="status-select" data-id="${b.id}" aria-label="Status">
+              ${Object.entries(STATUS).map(([v, l]) => `<option value="${v}" ${v === b.status ? "selected" : ""}>${l}</option>`).join("")}
+            </select>
+            <select class="rating-select" data-id="${b.id}" aria-label="Nota">
+              <option value="">—</option>
+              ${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${n === b.rating ? "selected" : ""}>${n}★</option>`).join("")}
+            </select>
+            <button class="ghost" data-delete="${b.id}" title="Excluir" aria-label="Excluir">✕</button>
+          </div>
+        </article>`;
+    }
+
+    async function loadBooks() {
+      const params = new URLSearchParams();
+      if (currentFilter) params.set("status", currentFilter);
+      const books = await api("/books?" + params.toString());
+      $("list").innerHTML = books.length === 0
+        ? '<div class="empty">Sua estante está vazia por aqui. Busque um livro acima e clique em "Adicionar".</div>'
+        : books.map(bookCard).join("");
+    }
+
+    async function refresh() {
+      try { showError(""); await Promise.all([loadBooks(), loadStats()]); }
+      catch (e) { showError(e.message); }
+    }
+
+    /* ---------- Busca na Open Library ---------- */
+    function resultCard(r, i) {
+      const sub = [r.year, r.pages ? `${r.pages} págs.` : ""].filter(Boolean).join(" · ");
+      return `
+        <article class="card">
+          ${coverHtml(r.title, r.coverUrl, null)}
+          <h3>${esc(r.title)}</h3>
+          <p class="author">${esc(r.author)}</p>
+          ${sub ? `<p class="meta">${esc(sub)}</p>` : ""}
+          <button class="add" data-add="${i}">+ Adicionar</button>
+        </article>`;
+    }
+
+    $("search-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const q = $("search-q").value.trim();
+      if (q.length < 2) return;
+      $("search-results").innerHTML = '<p class="hint">Buscando...</p>';
+      try {
+        showError("");
+        lastResults = await api("/search?q=" + encodeURIComponent(q));
+        $("search-results").innerHTML = lastResults.length === 0
+          ? '<p class="hint">Nenhum resultado encontrado.</p>'
+          : `<div class="row">${lastResults.map(resultCard).join("")}</div>`;
+      } catch (e) {
+        $("search-results").innerHTML = "";
+        showError(e.message);
+      }
+    });
+
+    $("search-results").addEventListener("click", async (event) => {
+      const index = event.target.dataset.add;
+      if (index === undefined) return;
+      const r = lastResults[Number(index)];
+      const body = { title: r.title, author: r.author, status: "quero_ler" };
+      if (r.pages) body.pages = r.pages;
+      if (r.coverUrl) body.cover_url = r.coverUrl;
+      try {
+        await api("/books", { method: "POST", body: JSON.stringify(body) });
+        event.target.textContent = "Adicionado ✓";
+        event.target.disabled = true;
+        refresh();
+      } catch (e) { showError(e.message); }
+    });
+
+    /* ---------- Ações na estante ---------- */
+    $("tabs").addEventListener("click", (event) => {
+      if (!event.target.classList.contains("tab")) return;
+      currentFilter = event.target.dataset.filter;
+      document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === event.target));
+      refresh();
+    });
+
+    $("list").addEventListener("change", async (event) => {
+      const el = event.target;
+      let patch = null;
+      if (el.classList.contains("status-select")) patch = { status: el.value };
+      if (el.classList.contains("rating-select")) patch = { rating: el.value ? Number(el.value) : null };
+      if (!patch) return;
+      try {
+        await api("/books/" + el.dataset.id, { method: "PATCH", body: JSON.stringify(patch) });
+        refresh();
+      } catch (e) { showError(e.message); }
+    });
+
+    $("list").addEventListener("click", async (event) => {
+      const id = event.target.dataset.delete;
+      if (!id || !confirm("Excluir este livro?")) return;
+      try { await api("/books/" + id, { method: "DELETE" }); refresh(); }
+      catch (e) { showError(e.message); }
+    });
+
+    /* ---------- Cadastro manual ---------- */
+    $("book-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const f = new FormData(event.target);
+      const body = { title: f.get("title"), author: f.get("author"), status: f.get("status") };
+      if (f.get("pages")) body.pages = Number(f.get("pages"));
+      if (f.get("rating")) body.rating = Number(f.get("rating"));
+      try {
+        await api("/books", { method: "POST", body: JSON.stringify(body) });
+        event.target.reset();
+        refresh();
+      } catch (e) { showError(e.message); }
+    });
+
+    refresh();
+  </script>
+</body>
+</html>

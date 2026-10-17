@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bookshelf-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookshelf
+      POSTGRES_PASSWORD: bookshelf
+      POSTGRES_DB: bookshelf
+    ports:
+      - "5432:5432"
+    volumes:
+      - bookshelf-data:/var/lib/postgresql/data
+
+volumes:
+  bookshelf-data:
